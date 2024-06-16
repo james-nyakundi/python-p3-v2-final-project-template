@@ -46,6 +46,7 @@ class DonationManagementSystem:
                 user_id INTEGER,
                 campaign_id INTEGER,
                 review TEXT,
+                rating INTEGER,  -- Add rating column
                 FOREIGN KEY (user_id) REFERENCES Users(id),
                 FOREIGN KEY (campaign_id) REFERENCES Campaigns(id)
             )
@@ -77,9 +78,25 @@ class DonationManagementSystem:
         self.cursor.execute('''SELECT * FROM Beneficiaries''')
         return self.cursor.fetchall()
 
-    def write_review(self, user_id, campaign_id, review):
-        self.cursor.execute('''INSERT INTO Reviews (user_id, campaign_id, review) VALUES (?, ?, ?)''', (user_id, campaign_id, review))
+    def write_review(self, user_id, campaign_id, review, rating):
+        self.cursor.execute('''INSERT INTO Reviews (user_id, campaign_id, review, rating) VALUES (?, ?, ?, ?)''', (user_id, campaign_id, review, rating))
         self.conn.commit()
+
+    def view_reviews_for_campaign(self, campaign_id):
+        self.cursor.execute('''SELECT * FROM Reviews WHERE campaign_id = ?''', (campaign_id,))
+        return self.cursor.fetchall()
+
+    def view_highest_rated_campaigns(self):
+        self.cursor.execute('''SELECT campaign_id, AVG(rating) AS avg_rating FROM Reviews GROUP BY campaign_id ORDER BY avg_rating DESC''')
+        return self.cursor.fetchall()
+
+    def update_user_profile(self, user_id, new_email, new_password):
+        self.cursor.execute('''UPDATE Users SET email = ?, password = ? WHERE id = ?''', (new_email, new_password, user_id))
+        self.conn.commit()
+
+    def view_all_users(self):
+        self.cursor.execute('''SELECT * FROM Users''')
+        return self.cursor.fetchall()
 
     def add_campaign(self, name, description, target_amount):
         self.cursor.execute('''INSERT INTO Campaigns (name, description, target_amount) VALUES (?, ?, ?)''', (name, description, target_amount))
@@ -211,9 +228,10 @@ def main():
             # Write a review for a campaign
             campaign_id = int(input("Enter the campaign ID you want to review: "))
             review = input("Write your review: ")
-            # Assuming user_id is obtained from user authentication
-            user_id = 1  # Example user_id
-            dms.write_review(user_id, campaign_id, review)
+            rating = int(input("Enter your rating (1-5): "))
+            
+            user_id = 1  
+            dms.write_review(user_id, campaign_id, review, rating)
             print("Review submitted successfully!")
         elif choice == '8':
             # View reviews for a campaign
@@ -243,15 +261,15 @@ def main():
             print("Campaign details updated successfully!")
         elif choice == '12':
             # Generate donation report (admin)
-            report = dms.generate_donation_report()
+            donation_report = dms.generate_donation_report()
             print("Donation Report:")
-            for item in report:
-                print(item)
+            for report in donation_report:
+                print(report)
         elif choice == '13':
             # View all donations for a campaign
             campaign_id = int(input("Enter the campaign ID to view donations: "))
             donations = dms.view_all_donations_for_campaign(campaign_id)
-            print("All Donations for Campaign:")
+            print("Donations for Campaign:")
             for donation in donations:
                 print(donation)
         elif choice == '14':
@@ -270,15 +288,15 @@ def main():
                 print(beneficiary)
         elif choice == '16':
             # View most donated campaigns
-            most_donated = dms.view_most_donated_campaigns()
+            most_donated_campaigns = dms.view_most_donated_campaigns()
             print("Most Donated Campaigns:")
-            for campaign in most_donated:
+            for campaign in most_donated_campaigns:
                 print(campaign)
         elif choice == '17':
             # View highest-rated campaigns
-            highest_rated = dms.view_highest_rated_campaigns()
+            highest_rated_campaigns = dms.view_highest_rated_campaigns()
             print("Highest Rated Campaigns:")
-            for campaign in highest_rated:
+            for campaign in highest_rated_campaigns:
                 print(campaign)
         elif choice == '18':
             # Update user profile
@@ -289,10 +307,10 @@ def main():
             print("User profile updated successfully!")
         elif choice == '19':
             # Generate campaign statistics report (admin)
-            report = dms.generate_campaign_statistics_report()
+            campaign_stats_report = dms.generate_campaign_statistics_report()
             print("Campaign Statistics Report:")
-            for item in report:
-                print(item)
+            for report in campaign_stats_report:
+                print(report)
         elif choice == '20':
             # View all users
             users = dms.view_all_users()
@@ -302,16 +320,17 @@ def main():
         elif choice == '21':
             # View campaign details
             campaign_id = int(input("Enter the campaign ID to view details: "))
-            campaign = dms.view_campaign_details(campaign_id)
-            print("Campaign Details:")
-            print(campaign)
+            campaign_details = dms.view_campaign_details(campaign_id)
+            if campaign_details:
+                print("Campaign Details:")
+                print(campaign_details)
+            else:
+                print("Campaign not found.")
         elif choice == '22':
-            print("Exiting...")
+            print("Exiting the Donation Management System. Goodbye!")
             break
         else:
-            print("Invalid choice. Please enter a number between 1 and 22.")
+            print("Invalid choice. Please enter a number from 1 to 22.")
 
 if __name__ == "__main__":
     main()
-
-
